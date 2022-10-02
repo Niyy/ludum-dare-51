@@ -17,6 +17,7 @@ class Game
         @tiling = {:w => 32, :h => 32}
         @tile_select = nil
         @tile_cost = 5
+        @tick_offset = 0
         @constructed = {}
         @producers = {}
         @input_manager = {
@@ -35,21 +36,13 @@ class Game
         )
 
         @resources = {
-            :population => {
-                :text => 'Population',
-                :children => 2,
-                :housed => {
-                    :text => 'Housed',
-                    :value => 0
-                },
-                :homeless => {
-                    :text => 'Homeless',
-                    :value => 0
-                },
-                :total => {
-                    :text => 'Total',
-                    :value => 0
-                }
+            :pop_housed => {
+                :text => 'Housed',
+                :value => 0
+            },
+            :pop_homeless => {
+                :text => 'Homeless',
+                :value => 0
             },
             :jobs => {
                 :text => 'Available Jobs',
@@ -65,13 +58,31 @@ class Game
             }
         }
 
+        even_initialize(args: args)
         ui_initialize(args: args)
+    end
+
+
+    def even_initialize(args: nil)
+        @event_migrants = Event.new(
+            start_text: 'New peasants will arrive any moment. Prepare for their arrival',
+            end_text: "#{2} peasents have arrived!",
+            resources: {
+                :pop_homeless => 2
+            }
+        )
+
+        @event_handler = Event_Handler.new(
+            events: [@event_migrants]
+        )
     end
 
 
     def ui_initialize(args: nil)
         text_height = 15
         text_width = 8.5 
+
+        @ui_events = []
 
         @ui_timer_bar = {
             :x => (args.grid.right / 2) - 150,
@@ -155,12 +166,17 @@ class Game
 
 
     def logic_()
+        workers_left = @resources.pop_housed.value
         tile_index = 0
         did_interact = false
 
         @ui_timer_bar.w = calc_timer_bar_width()
         @ui_deck_count.text = @deck.length()
 
+        # Updates of resources
+        handle_housing_distribution()
+
+        # Updates to the deck and hand
         if(timer_state() == 0)
             @tile_select = nil
             @deck += @hand
@@ -168,6 +184,7 @@ class Game
         end
 
         if(@hand.length == 0)
+            @tick_offset = state.tick_count
             add_cards_to_hand()
         end
 
@@ -191,9 +208,9 @@ class Game
             did_interact = true
         end
 
-#        puts '-------------------------------' if(state.tick_count % 60 == 0)
         @constructed.values().each() do |tile|
-            if(tile.is_a?(Producer))
+            if(tile.is_a?(Producer) && workers_left > 0)
+                workers_left -= 1
                 @resources = tile.producing(@resources, state.tick_count)
             end
         end
@@ -223,6 +240,9 @@ class Game
             @tile_select = nil
         end
 
+        @event_handler.create_event(state.tick_count)
+        @resources = @event_handler.event_proceed(@resources, state.tick_count)
+
         @ui_resource_list = build_list_render(@resources, {:x => args.grid.left, :y => args.grid.top})
     end
 
@@ -249,12 +269,12 @@ class Game
 
 
     def calc_timer_bar_width()
-        return 0.5 * (args.state.tick_count % @@max_timer)
+        return 0.5 * ((args.state.tick_count - @tick_offset) % @@max_timer)
     end
 
 
     def timer_state()
-        return (args.state.tick_count % @@max_timer)
+        return ((args.state.tick_count - @tick_offset) % @@max_timer)
     end
 
 
@@ -290,6 +310,15 @@ class Game
             hand_addition.h = @in_hand_size
 
             @hand << hand_addition
+        end
+    end
+
+
+    def handle_housing_distribution()
+        if(@resources.housing.value > 0 && @resources.pop_homeless.value > 0)
+            @resources.housing.value -= 1
+            @resources.pop_homeless.value -= 1
+            @resources.pop_housed.value += 1
         end
     end
 
