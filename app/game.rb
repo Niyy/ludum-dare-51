@@ -1,10 +1,11 @@
 class Game
     attr_gtk
-    attr_accessor :constructed, :hand
+    attr_accessor :constructed, :hand, :event_handler
 
 
     @@id = 0
     @@max_timer = 600
+    @@text_width = 9.95
 
 
     def initialize(args: nil)
@@ -65,7 +66,7 @@ class Game
 
     def even_initialize(args: nil)
         @event_migrants = Event.new(
-            start_text: 'New peasants will arrive any moment. Prepare for their arrival',
+            start_text: 'New peasants will arrive any moment. Prepare for their arrival.',
             end_text: "#{2} peasents have arrived!",
             resources: {
                 :pop_homeless => 2
@@ -146,6 +147,7 @@ class Game
         render << @ui_taper
         render << @ui_timer_bar
         render << @ui_resource_list
+        render << @event_handler.get_renders
 
         @hand.each() do |tile|
             tile.x = (screen_center + div * hand_count) - offset
