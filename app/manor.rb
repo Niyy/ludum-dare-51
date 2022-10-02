@@ -11,6 +11,13 @@ class Manor < Tile
             Producer.new(),
             Producer.new()
         ]
+        @global_additions = [
+            House.new(),
+            Producer.new()
+        ]
+
+        puts @create_tiles
+        puts @global_additions
     end
 
 

@@ -1,6 +1,6 @@
 class Game
     attr_gtk
-    attr_accessor :constructed
+    attr_accessor :constructed, :hand
 
 
     @@id = 0
@@ -179,7 +179,7 @@ class Game
         # Updates to the deck and hand
         if(timer_state() == 0)
             @tile_select = nil
-            @deck += @hand
+            @deck += @hand if(@hand.length() > 0)
             @hand = []
         end
 
@@ -189,7 +189,9 @@ class Game
         end
 
         @hand.each() do |tile|
-            if(input_ready(@input_manager.mouse.left) && geometry.inside_rect?(inputs.mouse.point, tile))
+            if( input_ready(@input_manager.mouse.left) && 
+                geometry.inside_rect?(inputs.mouse.point, tile)
+            )
                 @tile_select = tile_index
                 did_interact = true
             end
@@ -197,13 +199,13 @@ class Game
             tile_index += 1
         end
 
-        if(input_ready(@input_manager.mouse.left) && 
+        if( input_ready(@input_manager.mouse.left) && 
             geometry.inside_rect?(inputs.mouse.point, @ui_deck) &&
-            @resources.tier_one_resources.value - @tile_cost > 0 &&
-            @global_tiles.sample()
+            @resources.tier_one_resources.value - @tile_cost >= 0 &&
+            @global_tiles.length() > 0
         )
             @resources.tier_one_resources.value -= @tile_cost
-            @deck << @global_tiles.sample()
+            @deck << @global_tiles.sample().clone()
 
             did_interact = true
         end
@@ -230,6 +232,7 @@ class Game
             puts @constructed[@mouse_tile]
             @producers[@mouse_tile] = @constructed[@mouse_tile] if(@constructed[@mouse_tile].is_a?(Producer))
 
+            @global_tiles = @hand[@tile_select].inject_into_global(@global_tiles)
             @deck = @hand[@tile_select].inject_into_deck(@deck)
             @resources = @hand[@tile_select].add_resources(@resources)
 
@@ -253,7 +256,7 @@ class Game
 
 
     def input_ready(input_tick)
-        return input_tick == state.tick_count
+        return input_tick == (state.tick_count - 1)
     end
 
 
@@ -339,7 +342,8 @@ class Game
             hand: @hand,
             deck: @deck,
             resources: @resources,
-            constructed: @constructed
+            constructed: @constructed,
+            global_tiles: @global_tiles
         }
     end
 

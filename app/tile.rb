@@ -22,7 +22,14 @@ class Tile
         @created_on = created_on
         @create_tiles = create_tiles 
         @resources = resources
-        @global_additions = {}
+        @global_additions = []
+    end
+
+
+    def inject_into_global(global)
+        global += @global_additions
+
+        return global
     end
 
 
@@ -66,6 +73,7 @@ class Tile
 
 
     def serialize()
+        {x: @x, y: @y, w: @w, h: @h, path: @path}
     end
 
 
