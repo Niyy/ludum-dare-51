@@ -2,6 +2,8 @@ class Manor < Tile
     def initialize(**args)
         super
 
+        @path = 'sprites/manor_refined.png'
+
         @create_tiles = [
             House.new(),
             House.new(),

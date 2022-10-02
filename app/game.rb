@@ -18,6 +18,7 @@ class Game
         @tile_select = nil
         @tile_cost = 5
         @constructed = {}
+        @producers = {}
         @input_manager = {
             :mouse => {
                 :left => -1
@@ -49,6 +50,10 @@ class Game
                     :text => 'Total',
                     :value => 0
                 }
+            },
+            :jobs => {
+                :text => 'Available Jobs',
+                :value => 0
             },
             :housing => {
                 :text => 'Available Housing',
@@ -175,9 +180,10 @@ class Game
             tile_index += 1
         end
 
-        if( input_ready(@input_manager.mouse.left) && 
+        if(input_ready(@input_manager.mouse.left) && 
             geometry.inside_rect?(inputs.mouse.point, @ui_deck) &&
-            @resources.tier_one_resources.value - @tile_cost > 0
+            @resources.tier_one_resources.value - @tile_cost > 0 &&
+            @global_tiles.sample()
         )
             @resources.tier_one_resources.value -= @tile_cost
             @deck << @global_tiles.sample()
@@ -187,8 +193,6 @@ class Game
 
 #        puts '-------------------------------' if(state.tick_count % 60 == 0)
         @constructed.values().each() do |tile|
-            puts tile.class if(state.tick_count % 60 == 0)
-
             if(tile.is_a?(Producer))
                 @resources = tile.producing(@resources, state.tick_count)
             end
@@ -198,13 +202,16 @@ class Game
             !@tile_select.nil? &&
             !did_interact &&
             input_ready(@input_manager.mouse.left) &&
-            is_connected(@constructed, @tiling, @mouse_tile, @hand[@tile_select])
+            @hand[@tile_select].is_connected(@constructed, @tiling, @mouse_tile)
         )
             @constructed[@mouse_tile] = @hand[@tile_select].clone()
             @constructed[@mouse_tile].x = @mouse_tile.x
             @constructed[@mouse_tile].y = @mouse_tile.y
             @constructed[@mouse_tile].w = @tiling.w
             @constructed[@mouse_tile].h = @tiling.h
+
+            puts @constructed[@mouse_tile]
+            @producers[@mouse_tile] = @constructed[@mouse_tile] if(@constructed[@mouse_tile].is_a?(Producer))
 
             @deck = @hand[@tile_select].inject_into_deck(@deck)
             @resources = @hand[@tile_select].add_resources(@resources)
@@ -284,18 +291,6 @@ class Game
 
             @hand << hand_addition
         end
-    end
-
-
-    def is_connected(constructed, tiling, mouse_tile, tile)
-        north = {:x => mouse_tile.x, :y => mouse_tile.y + tiling.h}
-        south = {:x => mouse_tile.x, :y => mouse_tile.y - tiling.h}
-        east = {:x => mouse_tile.x + tiling.w, :y => mouse_tile.y}
-        west = {:x => mouse_tile.x - tiling.w, :y => mouse_tile.y}
-
-        return  constructed.has_key?(north) || constructed.has_key?(south) ||
-                constructed.has_key?(east) || constructed.has_key?(west) ||
-                tile.is_a?(Manor)
     end
 
 

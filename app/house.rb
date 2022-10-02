@@ -2,7 +2,7 @@ class House < Tile
     def initialize(**args)
         super
 
-        @path = 'sprites/house_tile.png'
+        @path = 'sprites/homes_refined.png'
         @resources = {
             :housing => 4
         }
