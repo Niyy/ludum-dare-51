@@ -1,6 +1,6 @@
 class Tile
     attr_sprite
-    attr_accessor
+    attr_accessor :x, :y, :w, :h, :path
 
 
     def initialize(x: 0, y: 0, w: 32, h: 32, path: 'sprites/tile_back.png', resources: {},
@@ -58,6 +58,26 @@ class Tile
         return  constructed.has_key?(north) || constructed.has_key?(south) ||
                 constructed.has_key?(east) || constructed.has_key?(west) ||
                 self.is_a?(Manor)
+    end
+
+
+    def north(tiling, mouse_tile)
+        return {:x => mouse_tile.x, :y => mouse_tile.y + tiling.h}
+    end
+
+    
+    def south(tiling, mouse_tile)
+        return {:x => mouse_tile.x, :y => mouse_tile.y - tiling.h}
+    end
+
+
+    def east(tiling, mouse_tile)
+        return {:x => mouse_tile.x + tiling.w, :y => mouse_tile.y}
+    end
+
+
+    def west(tiling, mouse_tile)
+        return {:x => mouse_tile.x - tiling.w, :y => mouse_tile.y}
     end
 
 
