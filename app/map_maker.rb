@@ -26,9 +26,11 @@ class Map_Maker
 
         river_tile = Wang_Tile.new()
         fertial_plane = Wang_Tile.new(
+            terrain_type: :fertial_plane,
             base: 'fertial_plane.png'
         )
         mountain_tile = Wang_Tile.new(
+            terrain_type: :mountain,
             base: 'mountain.png'
         )
 

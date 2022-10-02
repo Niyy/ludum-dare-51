@@ -3,7 +3,7 @@ class Tile
     attr_accessor :x, :y, :w, :h, :path
 
 
-    def initialize(x: 0, y: 0, w: 32, h: 32, path: 'sprites/tile_back.png', resources: {},
+    def initialize(x: 0, y: 0, w: 32, h: 32, path: '', resources: {},
         create_tiles: [], created_on: 0, type: :tile
     )
         @x = x

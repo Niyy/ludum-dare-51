@@ -1,10 +1,14 @@
 class Wang_Tile < Tile
-    def initialize(base: 'river.png', map: {}, tiling: {}, **args)
+    attr_accessor :terrain_type
+
+
+    def initialize(base: 'river.png', terrain_type: :none, map: {}, tiling: {}, **args)
         super
 
         @wang_position = 0
         @base = base
         @to_path = 'sprites/map/'
+        @terrain_type = terrain_type
     end
 
 
@@ -22,10 +26,18 @@ class Wang_Tile < Tile
         map[mouse_tile] = self
 
         if(depth > 0)
-            map[_north].generate_wang_position(map, tiling, _north, 0) if(has_north > 0)
-            map[_south].generate_wang_position(map, tiling, _south, 0) if(has_south > 0)
-            map[_west].generate_wang_position(map, tiling, _west, 0) if(has_west > 0)
-            map[_east].generate_wang_position(map, tiling, _east, 0) if(has_east > 0)
+            map[_north].generate_wang_position(map, tiling, _north, 0) if(has_north > 0 && 
+                map[_north].terrain_type == @terrain_type
+            )
+            map[_south].generate_wang_position(map, tiling, _south, 0) if(has_south > 0 && 
+                map[_south].terrain_type == @terrain_type
+            )
+            map[_west].generate_wang_position(map, tiling, _west, 0) if(has_west > 0 && 
+                map[_west].terrain_type == @terrain_type
+            )
+            map[_east].generate_wang_position(map, tiling, _east, 0) if(has_east > 0 && 
+                map[_east].terrain_type == @terrain_type
+            )
         end
 
         @wang_position = has_north + has_south + has_west + has_east
@@ -39,13 +51,28 @@ class Wang_Tile < Tile
     end
 
 
+    def serialize()
+        {
+            x: @x,
+            y: @y,
+            w: @w,
+            h: @h,
+            path: @path,
+            base: @base,
+            terrain_type: @terrain_type
+        }
+    end
+
+
     def clone()
         return Wang_Tile.new(
             x: @x,
             y: @y,
             w: @w,
             h: @h,
-            base: @base
+            path: @path,
+            base: @base,
+            terrain_type: @terrain_type
         )
     end
 end

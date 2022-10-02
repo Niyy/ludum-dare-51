@@ -7,7 +7,7 @@ require 'app/event.rb'
 require 'app/event_handler.rb'
 
 ## Actual Game
-# require 'app/game.rb'
+require 'app/game.rb'
 
 # Map Maker
-require 'app/map_maker.rb'
+# require 'app/map_maker.rb'

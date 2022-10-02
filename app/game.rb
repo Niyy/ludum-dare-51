@@ -10,11 +10,14 @@ class Game
 
     def initialize(args: nil)
         @last_mouse = args.inputs.mouse
+        @game_started = 0
+        @fade_in = 0
         @deck = []
         @hand = []
         @global_tiles = []
         @hand_size = 3
         @in_hand_size = 64
+        @map = {}
         @tiling = {:w => 32, :h => 32}
         @tile_select = nil
         @tile_cost = 5
@@ -61,6 +64,7 @@ class Game
 
         even_initialize(args: args)
         ui_initialize(args: args)
+        load_level(args: args)
     end
 
 
@@ -83,8 +87,16 @@ class Game
         text_height = 15
         text_width = 8.5 
 
+        start_text = "Click to Start"
+
         @ui_events = []
 
+        @ui_start_text = {
+            :x => (args.grid.right / 2) - (start_text.length * (@@text_width - 2)),
+            :y => (args.grid.top / 2),
+            :size_enum => 4,
+            :text => start_text
+        }
         @ui_timer_bar = {
             :x => (args.grid.right / 2) - 150,
             :y => 105,
@@ -119,10 +131,34 @@ class Game
     end
 
 
+    def load_level(args: nil)
+        @map = args.gtk.deserialize_state('data/first_map.map')
+
+        @map.values().each() do |tile|
+            tile.sprite!()
+        end
+    end
+
+
     def tick_()
-        inputs_()
-        outputs_()
-        logic_()
+        if(@game_started == 2)
+            inputs_()
+            outputs_()
+            logic_()
+        elsif(@game_started == 1)
+            animate_in_output()
+        else
+            start_()
+        end
+    end
+
+
+    def start_()
+        if(inputs.mouse.button_left)
+            @game_started = 1 
+        end
+
+        outputs.primitives << @ui_start_text
     end
 
 
@@ -141,6 +177,7 @@ class Game
         div = 64 + 16
         offset = ((@hand.length * div) / 2) - 9
 
+        render << @map.values()
         render << @constructed.values().flatten()
         render << @ui_deck
         render << @ui_deck_count
@@ -164,6 +201,46 @@ class Game
         end
 
         outputs.primitives << render
+    end
+
+
+    def animate_in_output()
+        render = []
+        screen_center = grid.right / 2
+        hand_count = 0
+        div = 64 + 16
+        offset = ((@hand.length * div) / 2) - 9
+
+        render << @map.values().map() do |tile| 
+            tile.a = @fade_in 
+            tile
+        end
+        render << @constructed.values().flatten().map() do |construct|
+            construct.a
+            construct
+        end
+
+        @hand.each() do |tile|
+            tile.x = (screen_center + div * hand_count) - offset
+            tile.y = 16 
+
+            render << tile
+
+            hand_count += 1
+        end
+
+        if(@tile_select != nil)
+            render << @mouse_tile.merge(@tiling)
+                .merge({path: @hand[@tile_select].path})
+        end
+
+        outputs.primitives << render
+
+        if(@fade_in >= 255)
+            @game_started = 2
+        end
+
+        @fade_in += 1
     end
 
 
