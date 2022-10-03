@@ -6,13 +6,12 @@ class Manor < Tile
 
         @create_tiles = [
             House.new(),
-            House.new(),
-            Producer.new(),
             Producer.new(),
             Producer.new()
         ]
         @global_additions = [
             House.new(),
+            Producer.new(),
             Producer.new()
         ]
 

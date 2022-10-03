@@ -5,6 +5,7 @@ class Game
 
     @@id = 0
     @@max_timer = 600
+    @@imperial_timer = 1200 
     @@text_width = 9.95
 
 
@@ -12,6 +13,9 @@ class Game
         @last_mouse = args.inputs.mouse
         @game_started = 0
         @fade_in = 0
+        @fade_builder = 1
+        @fade_ending = 255
+        @fade_ending_state = 2
         @deck = []
         @hand = []
         @global_tiles = []
@@ -20,10 +24,15 @@ class Game
         @map = {}
         @tiling = {:w => 32, :h => 32}
         @tile_select = nil
-        @tile_cost = 5
+        @tile_cost = 3
         @tick_offset = 0
+        @actual_start_tick = 0
         @constructed = {}
         @producers = {}
+        @floater_ui = []
+        @imperail_tax = 0
+        @imperail_tax_increase = 3
+        @failure_limit = -20
         @input_manager = {
             :mouse => {
                 :left => -1
@@ -62,13 +71,13 @@ class Game
             }
         }
 
-        even_initialize(args: args)
+        event_initialize(args: args)
         ui_initialize(args: args)
         load_level(args: args)
     end
 
 
-    def even_initialize(args: nil)
+    def event_initialize(args: nil)
         @event_migrants = Event.new(
             start_text: 'New peasants will arrive any moment. Prepare for their arrival.',
             end_text: "#{2} peasents have arrived!",
@@ -80,6 +89,9 @@ class Game
         @event_handler = Event_Handler.new(
             events: [@event_migrants]
         )
+
+        @event_handler.add_to_chain("Your first tax to the imperial regime will be #{@imperail_tax} Tier I goods when the blue bar fills.")
+        @event_handler.add_to_chain("Do not incure a tax debt of less than #{@failure_limit}, or your charter will be revoked.")
     end
 
 
@@ -88,14 +100,21 @@ class Game
         text_width = 8.5 
 
         start_text = "Click to Start"
+        lose_text = "The Imperial Council Has Revoked Your Charter. Click to be Reinstated."
 
         @ui_events = []
 
         @ui_start_text = {
-            :x => (args.grid.right / 2) - (start_text.length * (@@text_width - 2)),
+            :x => (args.grid.right / 2) - (start_text.length * (text_width - 2)),
             :y => (args.grid.top / 2),
             :size_enum => 4,
             :text => start_text
+        }
+        @ui_lose_text = {
+            :x => (args.grid.right / 2) - (lose_text.length * (text_width - 2)),
+            :y => (args.grid.top / 2),
+            :size_enum => 4,
+            :text => lose_text 
         }
         @ui_timer_bar = {
             :x => (args.grid.right / 2) - 150,
@@ -103,6 +122,13 @@ class Game
             :w => 0,
             :h => 20,
             :path => 'sprites/green_fill_bar.png'
+        }
+        @ui_imperial_bar = {
+            :x => (args.grid.right / 2) - 150,
+            :y => args.grid.top - 48, 
+            :w => 0,
+            :h => 20,
+            :path => 'sprites/imperial_fill.png'
         }
         @ui_deck_count = {
             :x => (args.grid.right) - 82 + (text_width * 3),
@@ -127,6 +153,13 @@ class Game
             :h => 30,
             :path => 'sprites/taper.png'
         }
+        @ui_imperial_taper = {
+            :x => (args.grid.right / 2) - 160,
+            :y => args.grid.top - 52,
+            :w => 320,
+            :h => 30,
+            :path => 'sprites/taper.png'
+        }
         @ui_resource_list = build_list_render(@resources, {:x => args.grid.left, :y => args.grid.top})
     end
 
@@ -147,6 +180,10 @@ class Game
             logic_()
         elsif(@game_started == 1)
             animate_in_output()
+        elsif(@game_started == 3)
+            animate_out_output()
+        elsif(@game_started == 4)
+            lose_()
         else
             start_()
         end
@@ -159,6 +196,21 @@ class Game
         end
 
         outputs.primitives << @ui_start_text
+    end
+
+
+    def lose_()
+        @fade_in = 0
+        @fade_builder = 1
+        @fade_ending = 255
+        @fade_ending_state = 2
+
+        if(inputs.mouse.button_left)
+            initialize(args: args)
+            @game_started = 1 
+        end
+
+        outputs.primitives << @ui_lose_text
     end
 
 
@@ -181,10 +233,13 @@ class Game
         render << @constructed.values().flatten()
         render << @ui_deck
         render << @ui_deck_count
-        render << @ui_taper
         render << @ui_timer_bar
+        render << @ui_imperial_bar
+        render << @ui_taper
+        render << @ui_imperial_taper
         render << @ui_resource_list
         render << @event_handler.get_renders
+        render << @floater_ui
 
         @hand.each() do |tile|
             tile.x = (screen_center + div * hand_count) - offset
@@ -220,13 +275,36 @@ class Game
             construct
         end
 
-        @hand.each() do |tile|
-            tile.x = (screen_center + div * hand_count) - offset
-            tile.y = 16 
+        if(@tile_select != nil)
+            render << @mouse_tile.merge(@tiling)
+                .merge({path: @hand[@tile_select].path})
+        end
 
-            render << tile
+        outputs.primitives << render
 
-            hand_count += 1
+        if(@fade_in > @fade_ending)
+            @game_started = @fade_ending_state
+            @actual_start_tick = state.tick_count
+        end
+
+        @fade_in += @fade_builder
+    end
+
+
+    def animate_out_output()
+        render = []
+        screen_center = grid.right / 2
+        hand_count = 0
+        div = 64 + 16
+        offset = ((@hand.length * div) / 2) - 9
+
+        render << @map.values().map() do |tile| 
+            tile.a = @fade_in 
+            tile
+        end
+        render << @constructed.values().flatten().map() do |construct|
+            construct.a
+            construct
         end
 
         if(@tile_select != nil)
@@ -236,21 +314,35 @@ class Game
 
         outputs.primitives << render
 
-        if(@fade_in >= 255)
-            @game_started = 2
+        if(@fade_in < @fade_ending)
+            @game_started = @fade_ending_state
+            @actual_start_tick = state.tick_count
+            puts @actual_start_tick
         end
 
-        @fade_in += 1
+        @fade_in += @fade_builder
     end
 
 
     def logic_()
         workers_left = @resources.pop_housed.value
         tile_index = 0
+        floater_index = 0
         did_interact = false
+        producer_count = 0
+
+        if(@resources.tier_one_resources.value < @failure_limit)
+            @game_started = 3
+            @fade_builder = -1 * @fade_builder
+            @fade_in = 255
+            @fade_ending = 0
+            @fade_ending_state = 4
+        end
 
         @ui_timer_bar.w = calc_timer_bar_width()
         @ui_deck_count.text = @deck.length()
+
+        @ui_imperial_bar.w = calc_imperial_payment()
 
         # Updates of resources
         handle_housing_distribution()
@@ -262,7 +354,8 @@ class Game
             @hand = []
         end
 
-        if(@hand.length == 0)
+        if(@hand.length == 0 && @deck.length() > 0)
+            puts 'hello'
             @tick_offset = state.tick_count
             add_cards_to_hand()
         end
@@ -289,10 +382,24 @@ class Game
             did_interact = true
         end
 
-        @constructed.values().each() do |tile|
+        @constructed.entries().each() do |key, tile|
             if(tile.is_a?(Producer) && workers_left > 0)
+                producer_count += 1
                 workers_left -= 1
-                @resources = tile.producing(@resources, state.tick_count)
+                @resources = tile.producing(@resources, @map[key], state.tick_count)
+
+                if(tile.produce_this_tick > 0)
+                    floater = {
+                        :x => tile.x + (tile.w / 2),
+                        :y => tile.y + tile.h,
+                        :delta_x => 0,
+                        :delta_y => 1,
+                        :death_tick => state.tick_count + 300,
+                        :text => "+#{tile.produce_this_tick}"
+                    }
+
+                    @floater_ui << floater
+                end
             end
         end
 
@@ -322,10 +429,28 @@ class Game
             @tile_select = nil
         end
 
+        @floater_ui.delete_if() do |floater|
+            floater.death_tick < state.tick_count
+        end
+
+        @floater_ui.each() do |floater|
+            floater.x += floater.delta_x
+            floater.y += floater.delta_y
+        end
+
+
         @event_handler.create_event(state.tick_count)
         @resources = @event_handler.event_proceed(@resources, state.tick_count)
 
         @ui_resource_list = build_list_render(@resources, {:x => args.grid.left, :y => args.grid.top})
+
+        if(imperial_timer_state() == 0)
+            @resources.tier_one_resources.value -= @imperail_tax
+
+            @event_handler.add_to_chain("You have paid the imperial regime #{@imperail_tax} Tier I goods.")
+            @imperail_tax += @imperail_tax_increase * producer_count
+            @event_handler.add_to_chain("Your next payment will be #{@imperail_tax} Tier I goods.")
+        end
     end
 
 
@@ -351,12 +476,24 @@ class Game
 
 
     def calc_timer_bar_width()
-        return 0.5 * ((args.state.tick_count - @tick_offset) % @@max_timer)
+        return 0.5 * ((args.state.tick_count - @tick_offset - @actual_start_tick) % @@max_timer)
+    end
+
+
+    def calc_imperial_payment()
+        filler = (((args.state.tick_count - @actual_start_tick) % @@imperial_timer) * @@max_timer) / @@imperial_timer
+
+        return 0.5 * filler
     end
 
 
     def timer_state()
-        return ((args.state.tick_count - @tick_offset) % @@max_timer)
+        return ((args.state.tick_count - @tick_offset - @actual_start_tick) % @@max_timer)
+    end
+
+
+    def imperial_timer_state()
+        return ((args.state.tick_count - @actual_start_tick) % @@imperial_timer)
     end
 
 

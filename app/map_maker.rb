@@ -69,10 +69,10 @@ class Map_Maker
         offset = ((@hand.length * div) / 2) - 9
 
         renders << @map.values()
-        renders << {
-            path: 'sprites/tile_back.png', 
-            a: 100
-        }.merge(@mouse_tile).merge(@tiling)
+#        renders << {
+#            path: 'sprites/tile_back.png', 
+#            a: 100
+#        }.merge(@mouse_tile).merge(@tiling)
 
         @hand.each() do |tile|
             tile.x = (screen_center + div * hand_count) - offset
@@ -115,9 +115,22 @@ class Map_Maker
         end
 
         if( input_ready(@input_manager.mouse.right) && @map.has_key?(@mouse_tile))
-            _north = @m
+            _north = @map[@mouse_tile].north(@tiling, @mouse_tile)
+            _south = @map[@mouse_tile].south(@tiling, @mouse_tile)
+            _east = @map[@mouse_tile].east(@tiling, @mouse_tile)
+            _west = @map[@mouse_tile].west(@tiling, @mouse_tile)
 
             @map.delete(@mouse_tile)
+
+            tile_north = @map.has_key?(_north) ? @map[_north] : nil
+            tile_south = @map.has_key?(_south) ? @map[_south] : nil
+            tile_east = @map.has_key?(_east) ? @map[_east] : nil
+            tile_west = @map.has_key?(_west) ? @map[_west] : nil
+
+            tile_north.generate_wang_position(@map, @tiling, _north) if(!tile_north.nil?)
+            tile_south.generate_wang_position(@map, @tiling, _south) if(!tile_south.nil?)
+            tile_east.generate_wang_position(@map, @tiling, _east) if(!tile_east.nil?)
+            tile_west.generate_wang_position(@map, @tiling, _west) if(!tile_west.nil?)
         end
     end
 

@@ -5,7 +5,7 @@ class Event_Handler
     def initialize(events: [])
         @events = events
         @event_id = -1
-        @starting_likely_hood = 0.01 
+        @starting_likely_hood = 0.2 
         @event_likely_hood = @starting_likely_hood
         @random_val = rand
         @tick_interval = 60
@@ -89,7 +89,7 @@ class Event_Handler
             sub_end = index + character_limit
             index += 1 if(text[index] == ' ')
 
-            subs << text[index..sub_end]
+            subs << text[index...sub_end]
 
             index = sub_end
         end

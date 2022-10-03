@@ -1,9 +1,13 @@
 class Producer < Tile
+    attr_accessor :produce_this_tick
+
+
     def initialize(**args)
         super
 
         @path = 'sprites/field.png'
 
+        @produce_this_tick = 0
         @time_to_produce = 600 # 10 seconds in ticks
         @resources = {
             :jobs => 1
@@ -11,10 +15,16 @@ class Producer < Tile
         @produces = {
             :tier_one_resources => 1
         }
+        @bonus = {
+            :tier_one_resources => {
+                :fertial_plane => 2
+            }
+        }
     end
 
 
-    def producing(resources, tick_count)
+    def producing(resources, map_tile, tick_count)
+        @produce_this_tick = 0 
         relative_tick_count = tick_count - @created_on
 
         if(relative_tick_count % @time_to_produce == 0)
@@ -22,7 +32,14 @@ class Producer < Tile
                 puts key
                 puts value
 
+
+                @produce_this_tick += value
                 resources[key].value += value
+
+                if(@bonus.has_key?(key) && @bonus[key].has_key?(map_tile.terrain_type))
+                    @produce_this_tick += @bonus[key][map_tile.terrain_type]
+                    resources[key].value += @bonus[key][map_tile.terrain_type]
+                end
             end
         end
 
