@@ -348,7 +348,7 @@ class Game
         handle_housing_distribution()
 
         # Updates to the deck and hand
-        if(timer_state() == 0)
+        if(timer_state() == 0 && @deck.length() > 0)
             @tile_select = nil
             @deck += @hand if(@hand.length() > 0)
             @hand = []
@@ -407,7 +407,8 @@ class Game
             !@tile_select.nil? &&
             !did_interact &&
             input_ready(@input_manager.mouse.left) &&
-            @hand[@tile_select].is_connected(@constructed, @tiling, @mouse_tile)
+            @hand[@tile_select].is_connected(@constructed, @tiling, @mouse_tile) &&
+            @hand[@tile_select].can_place(@map, @mouse_tile)
         )
             @constructed[@mouse_tile] = @hand[@tile_select].clone()
             @constructed[@mouse_tile].x = @mouse_tile.x

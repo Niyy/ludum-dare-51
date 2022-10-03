@@ -61,6 +61,11 @@ class Tile
     end
 
 
+    def can_place(map, mouse_tile)
+        return !map.has_key?(mouse_tile) || map[mouse_tile].terrain_type != :mountain
+    end
+
+
     def north(tiling, mouse_tile)
         return {:x => mouse_tile.x, :y => mouse_tile.y + tiling.h}
     end
